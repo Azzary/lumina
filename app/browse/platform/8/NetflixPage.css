@@ -1,0 +1,39 @@
+.netflixHero__content {
+  position: absolute;
+  bottom: 80px;
+  left: 60px;
+}
+
+.netflixHero__title {
+  font-size: 56px;
+  font-weight: 800;
+}
+
+.netflixHero__subtitle {
+  font-size: 18px;
+  opacity: 0.85;
+}
+
+.netflixTabs {
+  display: flex;
+  gap: 24px;
+  padding: 24px 60px;
+}
+
+.netflixTabs button {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 16px;
+  cursor: pointer;
+  padding-bottom: 6px;
+}
+
+.netflixTabs button.active {
+  color: white;
+  border-bottom: 2px solid #e50914;
+}
+
+.netflixContent {
+  padding-bottom: 80px;
+}

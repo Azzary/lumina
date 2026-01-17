@@ -1,0 +1,20 @@
+.mediaRow {
+  margin-bottom: 32px;
+}
+
+.mediaRow__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.mediaRow__scroll {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px;
+  padding-top: 20px;
+
+  scroll-behavior: smooth;
+}

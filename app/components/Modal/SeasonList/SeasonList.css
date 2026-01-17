@@ -1,0 +1,71 @@
+.season {
+  margin-top: 16px;
+}
+
+.season__header {
+  width: 100%;
+  padding: 14px 16px;
+  background: #151515;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  color: white;
+  cursor: pointer;
+}
+
+.season__header:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.season__count {
+  display: block;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.season__chevron {
+  font-size: 18px;
+  transition: transform 0.2s ease;
+}
+
+.season__chevron.open {
+  transform: rotate(180deg);
+}
+
+.episodes {
+  padding: 12px 16px;
+}
+
+.episode {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.episode:last-child {
+  border-bottom: none;
+}
+
+.episode__header {
+  display: flex;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.episode__number {
+  opacity: 0.6;
+}
+
+.episode__title {
+  color: white;
+}
+
+.episode__overview {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #bdbdbd;
+}
