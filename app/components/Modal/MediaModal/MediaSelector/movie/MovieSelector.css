@@ -1,0 +1,68 @@
+.movie__selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.movie__button {
+  height: 42px;
+  width: 100%;
+
+  font-size: 14px;
+  font-weight: 500;
+
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+
+  background: var(--color-surface-2);
+  color: var(--color-text);
+
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.movie__button:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+.movie__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.movie__progress {
+  height: 4px;
+  width: 100%;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.movie__progress__bar {
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 0.3s ease;
+}
+
+
+.movie__button--danger {
+  height: 42px;
+  width: 100%;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  border-radius: var(--radius);
+  border: 1px solid rgba(229, 9, 20, 0.5);
+
+  background: rgba(229, 9, 20, 0.15);
+  color: var(--color-accent);
+
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+  margin-bottom: 10px;
+}
+
+.movie__button--danger:hover {
+  background: rgba(229, 9, 20, 0.25);
+}

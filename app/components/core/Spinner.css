@@ -1,0 +1,15 @@
+.ui__spinner {
+  display: inline-block;
+  border-radius: 50%;
+
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-text);
+  color: white;
+  animation: ui__spinner__spin 0.8s linear infinite;
+}
+
+@keyframes ui__spinner__spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

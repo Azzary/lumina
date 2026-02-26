@@ -1,0 +1,30 @@
+.tv__episode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 10px 0;
+
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tv__episode:last-child {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tv__episode span {
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.tv__episode__left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tv__episode__meta {
+  font-size: 12px !important;
+  opacity: 0.75;
+}

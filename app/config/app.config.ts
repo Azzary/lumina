@@ -1,10 +1,10 @@
 export const AppConfig = {
   servers: {
     metadata: {
-      baseUrl: "http://192.168.1.192:8081",
+      baseUrl: "/metadata",
     },
     download: {
-      baseUrl: "http://192.168.1.192:8585",
+      baseUrl: "/download",
     },
   },
 } as const;

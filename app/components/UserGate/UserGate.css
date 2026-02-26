@@ -1,0 +1,115 @@
+.userGate {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #0b0b10;
+}
+
+.userGate__panel {
+  width: min(960px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.userGate__title {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: #f8f8fa;
+}
+
+.userGate__list {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 6px 4px 10px;
+}
+
+.userGate__card {
+  flex: 0 0 140px;
+  height: 140px;
+  border-radius: 14px;
+  border: 2px solid #8f1a2e;
+  background: #6f1225;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.userGate__card:hover {
+  border-color: #c42c45;
+  background: #82172d;
+}
+
+.userGate__card:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.userGate__empty {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  padding: 10px 2px;
+}
+
+.userGate__create {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.userGate__input {
+  width: min(340px, 100%);
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: #14141a;
+  color: #fff;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.userGate__createBtn {
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid #9d2337;
+  background: #7a1629;
+  color: #fff;
+  font-weight: 700;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.userGate__createBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.userGate__error {
+  text-align: center;
+  color: #ff9da9;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .userGate__title {
+    font-size: 23px;
+  }
+
+  .userGate__card {
+    flex-basis: 120px;
+    height: 120px;
+  }
+}

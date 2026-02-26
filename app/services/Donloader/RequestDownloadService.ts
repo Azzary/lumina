@@ -5,4 +5,5 @@ export class RequestDownloadService {
   static send(payload: RequestDownloadPayload): Promise<void> {
     return downloadHttp.post<void>("/torrent/request", payload);
   }
+  
 }

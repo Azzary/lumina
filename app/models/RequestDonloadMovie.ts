@@ -4,4 +4,5 @@ export interface RequestDownloadPayload {
   year: string;
   tmdb_id: number;
   seasons?: number[];
+  episodes?: { season: number; episode: number }[];
 }

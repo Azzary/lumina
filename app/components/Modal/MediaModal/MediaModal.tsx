@@ -1,311 +1,327 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
+import { AppConfig } from "@/app/config/app.config";
 import { CardBaseData } from "@/app/models/CardBaseData";
 import { MediaDetails } from "@/app/models/MediaDetails";
-import { DownloadPlanDTO, TorrentDTO } from "@/app/models/DownloadDTO";
-
 import { MediaDetailsService } from "@/app/services/MovieMetaData/MediaDetailsService";
-import { RequestDownloadService } from "@/app/services/Donloader/RequestDownloadService";
-import { downloadHttp } from "@/app/services/httpClients";
-
+import { savePlayNavigationContext } from "@/app/play/playNavigation";
 import "./MediaModal.css";
+import MediaFrame from "./MediaFrame";
+import MediaSelector from "./MediaSelector/MediaSelector";
+import Spinner from "../../core/Spinner";
 
+type RecentItem = {
+  path: string;
+  title: string;
+  media_title: string;
+  tmdb_id: number | null;
+  media_type: "movie" | "tv" | null;
+  stored_title: string | null;
+  position_seconds: number;
+  duration_seconds: number | null;
+  updated_at: string;
+};
 
-type Props = {
+type RecentResponse = {
+  username: string;
+  items: RecentItem[];
+};
+
+type StreamProgress = {
+  position_seconds: number;
+  duration_seconds: number | null;
+  updated_at: string;
+};
+
+type StreamProgressResponse = {
+  path: string;
+  progress: StreamProgress | null;
+};
+
+const USER_COOKIE = "lumi_username";
+
+function readCookie(name: string): string | null {
+  const cookies = document.cookie.split(";").map((c) => c.trim());
+  for (const cookie of cookies) {
+    const [key, ...rest] = cookie.split("=");
+    if (key === name) {
+      return decodeURIComponent(rest.join("="));
+    }
+  }
+  return null;
+}
+
+function formatClock(seconds: number): string {
+  const safe = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const secs = safe % 60;
+
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(secs).padStart(2, "0");
+
+  if (hours > 0) {
+    return `${hours}:${mm}:${ss}`;
+  }
+
+  return `${mm}:${ss}`;
+}
+
+function fallbackDetails(media: CardBaseData): MediaDetails {
+  const rawId = parseInt(media.id, 10);
+  return {
+    id: Number.isFinite(rawId) ? rawId : 0,
+    mediaType: media.mediaType ?? "movie",
+    title: media.title,
+    overview: "",
+    posterUrl: media.posterUrl ?? undefined,
+    backdropUrl: media.backdropUrl ?? undefined,
+    year: media.year ?? undefined,
+    genres: [],
+  };
+}
+
+function normalize(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function isResumeCandidate(item: RecentItem): boolean {
+  const pos = Math.max(0, item.position_seconds ?? 0);
+  const dur = item.duration_seconds;
+  if (pos <= 5) return false;
+  if (dur && dur > 0 && dur - pos <= 30) return false;
+  return true;
+}
+
+export default function MediaModal({
+  open,
+  media,
+  onClose,
+}: {
   open: boolean;
   media: CardBaseData | null;
   onClose: () => void;
-};
-
-type MediaExistsResponse = {
-  exists: boolean;
-  path?: string | null;
-};
-
-type DownloadStatus = {
-  state: "queued" | "downloading" | "completed" | "error";
-  progress: number;
-  torrents: TorrentDTO[];
-};
-
-
-function computeGlobalStatus(
-  torrents: TorrentDTO[]
-): DownloadStatus {
-  if (torrents.length === 0) {
-    return { state: "queued", progress: 0, torrents };
-  }
-
-  let completed = 0;
-  let downloading = 0;
-  let totalProgress = 0;
-
-  for (const t of torrents) {
-    totalProgress += t.progress ?? 0;
-    if (t.state === "completed") completed++;
-    if (t.state === "downloading") downloading++;
-  }
-
-  const progress = Math.round(totalProgress / torrents.length);
-
-  if (completed === torrents.length) {
-    return { state: "completed", progress: 100, torrents };
-  }
-
-  if (downloading > 0) {
-    return { state: "downloading", progress, torrents };
-  }
-
-  return { state: "queued", progress, torrents };
-}
-
-
-export default function MediaModal({ open, media, onClose }: Props) {
+}) {
   const router = useRouter();
-  const pollTimer = useRef<number | null>(null);
 
   const [details, setDetails] = useState<MediaDetails | null>(null);
-  const [mediaExists, setMediaExists] = useState<MediaExistsResponse | null>(null);
-  const [downloadStatus, setDownloadStatus] = useState<DownloadStatus | null>(null);
-
+  const [showRequestManagement, setShowRequestManagement] =
+    useState<boolean>(false);
   const [showTrailer, setShowTrailer] = useState(false);
-  const [lockDownloadBtn, setLockDownloadBtn] = useState(false);
-
-
-  const checkMediaExists = (payload: {
-    media_type: "movie" | "tv";
-    title: string;
-  }) =>
-    downloadHttp.post<MediaExistsResponse>(
-      "/media/exists-on-disk",
-      payload
-    );
-
-  const fetchDownloadStatus = async (
-    title: string
-  ): Promise<DownloadStatus | null> => {
-    const plans = await downloadHttp.get<DownloadPlanDTO[]>("/media/get-downloads-status");
-    const titleNorm = title.toLowerCase();
-
-    for (const plan of plans) {
-      if (!plan.name.toLowerCase().includes(titleNorm)) continue;
-      return computeGlobalStatus(plan.torrents);
-    }
-
-    return null;
-  };
-
-
-  const playMedia = (path?: string | null) => {
-    if (!path || !details) return;
-
-    router.push(
-      `/play?` +
-        new URLSearchParams({
-          path,
-          mediaType: details.mediaType,
-          title: details.title,
-          year: details.year ?? "",
-        }).toString()
-    );
-
-    onClose();
-  };
-
+  const [resumePath, setResumePath] = useState<string | null>(null);
+  const [resumeLabel, setResumeLabel] = useState<string>("");
 
   useEffect(() => {
-    if (!open || !media || media.kind !== "media") return;
-
     setDetails(null);
-    setMediaExists(null);
-    setDownloadStatus(null);
-    setShowTrailer(false);
+    setResumePath(null);
+    setResumeLabel("");
+  }, [open, media?.id]);
 
-    if (pollTimer.current) {
-      clearInterval(pollTimer.current);
-      pollTimer.current = null;
-    }
+  useEffect(() => {
+    if (!media) return;
 
-    MediaDetailsService
-      .get(Number(media.id), media.mediaType!)
-      .then(async (d) => {
-        setDetails(d);
+    let cancelled = false;
 
-        const exists = await checkMediaExists({
-          media_type: d.mediaType,
-          title: d.title,
-        });
-
-        setMediaExists(exists);
-
-        if (!exists.exists) {
-          const dl = await fetchDownloadStatus(d.title);
-          if (dl) setDownloadStatus(dl);
+    MediaDetailsService.getMediaDetails(
+      parseInt(media.id, 10),
+      media.mediaType ?? "movie"
+    )
+      .then((data) => {
+        if (!cancelled) {
+          setDetails(data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDetails(fallbackDetails(media));
         }
       });
-  }, [open, media]);
-
-
-  useEffect(() => {
-    if (!details || !downloadStatus) return;
-    if (downloadStatus.state === "completed") return;
-
-    pollTimer.current = window.setInterval(async () => {
-      const dl = await fetchDownloadStatus(details.title);
-      if (!dl) return;
-
-      setDownloadStatus(dl);
-
-      if (dl.state === "completed") {
-        clearInterval(pollTimer.current!);
-        pollTimer.current = null;
-
-        const exists = await checkMediaExists({
-          media_type: details.mediaType,
-          title: details.title,
-        });
-
-        setMediaExists(exists);
-      }
-    }, 1000);
 
     return () => {
-      if (pollTimer.current) {
-        clearInterval(pollTimer.current);
-        pollTimer.current = null;
-      }
+      cancelled = true;
     };
-  }, [downloadStatus, details]);
+  }, [media]);
 
-
-  const handleMainButtonClick = async () => {
-    if (!details || !mediaExists) return;
-
-    if (mediaExists.exists) {
-      playMedia(mediaExists.path);
+  useEffect(() => {
+    if (!open || !media) {
       return;
     }
 
-    if (downloadStatus) return;
-
-    setLockDownloadBtn(true);
-    setTimeout(() => setLockDownloadBtn(false), 5000);
-
-    await RequestDownloadService.send({
-      media_type: details.mediaType,
-      title: details.title,
-      year: details.year ?? "",
-      tmdb_id: details.id,
-    });
-
-    setDownloadStatus({
-      state: "queued",
-      progress: 0,
-      torrents: [],
-    });
-  };
-
-
-  const mainButtonLabel = (() => {
-    if (!mediaExists) return "…";
-    if (mediaExists.exists) return "Lire";
-
-    if (downloadStatus) {
-      if (downloadStatus.state === "queued") return "Initialisation…";
-      if (downloadStatus.state === "downloading")
-        return `Téléchargement ${downloadStatus.progress}%`;
+    const username = readCookie(USER_COOKIE);
+    if (!username) {
+      return;
     }
 
-    return "Demander";
-  })();
+    let cancelled = false;
 
-  const buttonDisabled =
-    lockDownloadBtn ||
-    downloadStatus?.state === "queued" ||
-    downloadStatus?.state === "downloading";
+    const loadResume = async () => {
+      try {
+        const tmdbId = parseInt(media.id, 10);
+        const mediaType = media.mediaType ?? "movie";
 
-  if (!open) return null;
+        const recentRes = await fetch(
+          `${AppConfig.servers.download.baseUrl}/api/stream/recent?username=${encodeURIComponent(
+            username
+          )}&limit=100`,
+          { cache: "no-store" }
+        );
+        if (!recentRes.ok) {
+          throw new Error("cannot load recents");
+        }
 
+        const recentData = (await recentRes.json()) as RecentResponse;
+        const items = recentData.items ?? [];
+
+        const titleKey = normalize(media.title);
+        const matched = items.find((item) => {
+          const byTmdb =
+            Number.isFinite(tmdbId) &&
+            tmdbId > 0 &&
+            item.tmdb_id === tmdbId &&
+            item.media_type === mediaType;
+          if (byTmdb && isResumeCandidate(item)) return true;
+
+          if (item.media_type && item.media_type !== mediaType) return false;
+          const itemTitle = normalize(
+            item.stored_title || item.media_title || item.title || ""
+          );
+          return itemTitle === titleKey && isResumeCandidate(item);
+        });
+
+        if (matched?.path) {
+          if (!cancelled) {
+            setResumePath(matched.path);
+            setResumeLabel(formatClock(Math.max(0, matched.position_seconds ?? 0)));
+          }
+          return;
+        }
+
+        const availability = await MediaDetailsService.isMediaAvailableFromCard(
+          media
+        );
+        const mediaPath = availability.path;
+        if (!availability.exists || typeof mediaPath !== "string" || !mediaPath) {
+          return;
+        }
+
+        const res = await fetch(
+          `${AppConfig.servers.download.baseUrl}/api/stream/progress?path=${encodeURIComponent(
+            mediaPath
+          )}&username=${encodeURIComponent(username)}`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) {
+          return;
+        }
+
+        const data = (await res.json()) as StreamProgressResponse;
+        const progress = data.progress;
+        if (!progress) {
+          return;
+        }
+
+        const pos = Math.max(0, progress.position_seconds ?? 0);
+        const dur = progress.duration_seconds;
+
+        if (pos <= 5) {
+          return;
+        }
+
+        if (dur && dur > 0 && dur - pos <= 30) {
+          return;
+        }
+
+        if (!cancelled) {
+          setResumePath(mediaPath);
+          setResumeLabel(formatClock(pos));
+        }
+      } catch {
+      }
+    };
+
+    void loadResume();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, media]);
+
+  const resumePlayback = () => {
+    if (!media || !resumePath) {
+      return;
+    }
+
+    savePlayNavigationContext(media);
+    onClose();
+    const q = new URLSearchParams({
+      path: resumePath,
+      title: media.title,
+      tmdb_id: media.id,
+      media_type: media.mediaType ?? "movie",
+    });
+    router.push(
+      `/play?${q.toString()}`
+    );
+  };
+
+  if (!open || !media) {
+    return null;
+  }
 
   return (
-    <div className="modalOverlay" onClick={onClose}>
+    <div className="modal__overlay" onClick={onClose}>
       <div className="modal scrollbar" onClick={(e) => e.stopPropagation()}>
+        <button className="button close__button" onClick={onClose}>
+          ×
+        </button>
 
-        <div className="modal__hero">
-          {details?.backdropUrl ? (
-            <img className="modal__heroMedia" src={details.backdropUrl} />
-          ) : (
-            <div className="modal__heroMedia skeleton" />
-          )}
+        <MediaFrame
+          media={media}
+          runTrailer={showTrailer}
+          mediaDetail={details}
+          onClose={onClose}
+        />
 
-          {showTrailer && details?.trailerYoutubeKey && (
-            <iframe
-              className="modal__trailer"
-              src={`https://www.youtube.com/embed/${details.trailerYoutubeKey}?autoplay=1`}
-              allow="autoplay"
-              allowFullScreen
-            />
-          )}
-
-          <div className="modal__heroOverlay" />
-          <button className="modal__close" onClick={onClose}>✕</button>
-        </div>
-
-        <div className="modal__actions">
-          <button
-            className="modal__primaryBtn"
-            disabled={buttonDisabled}
-            onClick={handleMainButtonClick}
-          >
-            {mainButtonLabel}
-          </button>
-
-          {details?.trailerYoutubeKey && (
-            <button
-              className="modal__secondaryBtn"
-              onClick={() => setShowTrailer(v => !v)}
-            >
-              {showTrailer ? "Fermer la bande-annonce" : "Bande-annonce"}
+        <div className="media__controller">
+          {resumePath && (
+            <button className="button" onClick={resumePlayback}>
+              Reprendre {resumeLabel}
             </button>
           )}
+
+          <button className="button" onClick={() => setShowTrailer(!showTrailer)}>
+            Play Trailer
+          </button>
+
+          <button
+            className="button"
+            onClick={() => setShowRequestManagement(!showRequestManagement)}
+          >
+            Request management
+          </button>
         </div>
 
-        <div className="modal__content">
-          <h1 className="modal__title">{details?.title}</h1>
-
-          {details && (
-            <>
-              <div className="modal__meta">
-                {details.year && <span>{details.year}</span>}
-                {details.runtime && <span>{details.runtime} min</span>}
-                {details.genres.length > 0 && (
-                  <span>{details.genres.join(" • ")}</span>
-                )}
+        {showRequestManagement ? (
+          <MediaSelector mediaDetail={details} />
+        ) : (
+          <div className="media__controller">
+            {details === null ? (
+              <div className="spinner__container">
+                <Spinner size={70} />
               </div>
-
-              {details.overview && (
-                <p className="modal__overview">{details.overview}</p>
-              )}
-            </>
-          )}
-
-          {downloadStatus?.torrents.length ? (
-            <div className="torrentList">
-              {downloadStatus.torrents.map((t, i) => (
-                <div key={i} className="torrentRow">
-                  <div className="torrentTitle">{t.title}</div>
-                  <div className="torrentProgress">
-                    {t.state} • {t.progress}%
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
+            ) : (
+              <p>{details?.overview}</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+

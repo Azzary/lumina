@@ -1,0 +1,32 @@
+.tv__selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tv__season {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.tv__season__header {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.tv__season__episodes {
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tv__episode {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
