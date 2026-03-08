@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lumi TV Player</string>
+    <string name="url_hint">http://192.168.1.192:3000/download/api/stream?path=...</string>
+    <string name="play">Lire</string>
+
+    <string name="status_idle">Pret</string>
+    <string name="status_buffering">Chargement...</string>
+    <string name="status_ready">Lecture</string>
+    <string name="status_ended">Termine</string>
+    <string name="status_missing_url">URL manquante</string>
+</resources>
+
