@@ -66,6 +66,20 @@ function formatClock(seconds: number): string {
   return `${mm}:${ss}`;
 }
 
+function resolveStreamBaseUrl(proxyBaseUrl: string): string {
+  const configured = AppConfig.servers.download.streamBaseUrl;
+  if (configured) {
+    return configured;
+  }
+
+  if (typeof window === "undefined") {
+    return proxyBaseUrl;
+  }
+
+  const { hostname, protocol } = window.location;
+  return `${protocol}//${hostname}:8585`;
+}
+
 export default function PlayPage() {
   const params = useSearchParams();
   const router = useRouter();
@@ -76,6 +90,10 @@ export default function PlayPage() {
   const tmdbIdParam = params.get("tmdb_id");
   const mediaTypeParam = params.get("media_type");
   const apiBase = AppConfig.servers.download.baseUrl;
+  const streamBaseUrl = useMemo(
+    () => resolveStreamBaseUrl(apiBase),
+    [apiBase]
+  );
 
   const [state, setState] = useState<State>("waiting");
   const [progress, setProgress] = useState(0);
@@ -104,8 +122,8 @@ export default function PlayPage() {
 
   const streamUrl = useMemo(
     () =>
-      `${apiBase}/api/stream?path=${encodeURIComponent(path)}`,
-    [apiBase, path]
+      `${streamBaseUrl}/api/stream?path=${encodeURIComponent(path)}`,
+    [path, streamBaseUrl]
   );
 
   useEffect(() => {
@@ -514,6 +532,7 @@ export default function PlayPage() {
           src={streamUrl}
           autoPlay
           controls
+          preload="auto"
           onLoadedMetadata={onLoadedMetadata}
           onTimeUpdate={onTimeUpdate}
           onPause={onPause}
